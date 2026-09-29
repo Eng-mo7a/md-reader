@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>قارئ MD — ملفاتك بالعربي من اليمين للشمال</title>
+<meta name="description" content="افتح أي ملف Markdown بالعربي من اليمين للشمال: كل سطر بياخد اتجاهه لوحده، وعلى كل أمر زرار انسخ. ملفاتك بتتقري على جهازك بس.">
+<meta property="og:title" content="قارئ MD — ملفاتك بالعربي من اليمين للشمال">
+<meta property="og:description" content="اسحب ملف .md وهيتقري زي أي كتاب عربي. مجاني، ومن غير تسطيب، وملفاتك مش بتترفع في أي حتة.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #f7f5ef; --paper: #ffffff; --text: #1d1b16; --muted: #6b675c; --line: #e4dfd2; --accent: #a0761b; --code: #f1eee5; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #070d1a; --paper: #0e1729; --text: #e8eefc; --muted: #93a2bf; --line: #22324f; --accent: #e7b642; --code: #13203a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Cairo", "Segoe UI", Tahoma, sans-serif; font-size: 17px; line-height: 1.9; }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 18px; background: var(--paper); border-bottom: 1px solid var(--line); }
+  .bar b { font-size: 15px; }
+  .bar .name { color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50vw; }
+  .bar .live { color: var(--accent); font-size: 13px; }
+  button, select { font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .layout { display: grid; grid-template-columns: 1fr 250px; gap: 24px; max-width: 1180px; margin: 0 auto; padding: 24px 18px 80px; }
+  .toc { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow: auto; font-size: 14px; border-inline-start: 2px solid var(--line); padding-inline-start: 12px; }
+  .toc a { display: block; color: var(--muted); text-decoration: none; padding: 3px 0; }
+  .toc a.h3 { padding-inline-start: 12px; font-size: 13px; }
+  .toc a:hover { color: var(--accent); }
+  article { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 28px clamp(18px, 4vw, 48px); min-width: 0; }
+  article h1 { font-size: 28px; line-height: 1.5; margin-top: 0; }
+  article h2 { font-size: 22px; margin-top: 36px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  article h3 { font-size: 18px; margin-top: 26px; }
+  article a { color: var(--accent); }
+  article blockquote { margin: 16px 0; padding: 4px 16px; border-inline-start: 4px solid var(--accent); background: var(--code); border-radius: 0 8px 8px 0; }
+  article hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+  article code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 14.5px; background: var(--code); padding: 1px 6px; border-radius: 5px; unicode-bidi: isolate; }
+  article pre { position: relative; background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 40px 16px 14px; overflow-x: auto; white-space: pre-wrap; line-height: 1.8; unicode-bidi: plaintext; }
+  article pre code { background: none; padding: 0; font-size: 14.5px; font-family: "Cairo", Consolas, monospace; unicode-bidi: normal; }
+  article pre[dir="ltr"] code { font-family: Consolas, "Cascadia Mono", monospace; }
+  .copy { position: absolute; top: 8px; inset-inline-end: 8px; font-size: 12.5px; padding: 3px 10px; opacity: .85; }
+  article table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 15px; display: block; overflow-x: auto; }
+  article th, article td { border: 1px solid var(--line); padding: 7px 10px; text-align: start; vertical-align: top; }
+  article th { background: var(--code); }
+  article ul, article ol { padding-inline-start: 26px; }
+  article input[type="checkbox"] { margin-inline-end: 6px; }
+  .drop { max-width: 640px; margin: 12vh auto; text-align: center; border: 2px dashed var(--line); border-radius: 18px; padding: 48px 24px; color: var(--muted); }
+  .drop b { color: var(--text); font-size: 20px; display: block; margin-bottom: 8px; }
+  body.dragging .drop, body.dragging article { border-color: var(--accent); }
+  .hidden { display: none !important; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .toc { display: none; } }
+  .credit { text-align: center; color: var(--muted); font-size: 14px; padding: 0 18px 28px; }
+  .credit a { color: var(--accent); text-decoration: none; }
+  .private { display: block; margin-top: 14px; color: var(--accent); font-size: 15px; }
+  @media print { .bar, .toc, .copy, .credit { display: none !important; } .layout { display: block; padding: 0; } article { border: 0; } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>قارئ MD</b>
+  <button id="openBtn" type="button">افتح ملف</button>
+  <select id="fileList" class="hidden" aria-label="الملفات المفتوحة"></select>
+  <span id="name" class="name"></span>
+  <span id="live" class="live"></span>
+</div>
+<div id="drop" class="drop">
+  <b>اسحب أي ملف ‎.md‎ هنا</b>
+  أو دوس «افتح ملف». بيتعرض من اليمين للشمال، والكود الإنجليزي بيفضل شمال.<br>
+  ولو الملف اتعدّل وهو مفتوح، الصفحة بتتحدث لوحدها (في Chrome و Edge).
+  <span class="private">ملفاتك مش بتترفع في أي حتة — بتتقري على جهازك بس.</span>
+</div>
+<div id="layout" class="layout hidden">
+  <article id="doc"></article>
+  <nav id="toc" class="toc" aria-label="المحتوى"></nav>
+</div>
+<p class="credit">معمولة بإيد محمد — <a href="https://www.youtube.com/@ma3lomatech" target="_blank" rel="noopener">معلومة تك</a> · <a href="https://t.me/Ma3lomaTech" target="_blank" rel="noopener">تيليجرام</a></p>
+<input id="picker" type="file" accept=".md,.markdown,.txt" multiple hidden>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const files = [];
+let current = -1;
+let lastModified = 0;
+
+marked.use({ gfm: true, breaks: false });
+
+function slug(text, used) {
+  let s = text.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'part';
+  while (used.has(s)) s += '-';
+  used.add(s);
+  return s;
+}
+
+function render(text, name) {
+  const doc = $('#doc');
+  doc.innerHTML = marked.parse(text);
+  doc.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, td, th, blockquote').forEach((el) => el.setAttribute('dir', 'auto'));
+  doc.querySelectorAll('pre').forEach((pre) => {
+    pre.setAttribute('dir', 'auto');
+    const code = pre.textContent;
+    if (!/[؀-ۿ]/.test(code.slice(0, 200))) pre.setAttribute('dir', 'ltr');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy';
+    btn.textContent = 'انسخ';
+    btn.onclick = async () => {
+      try { await navigator.clipboard.writeText(pre.querySelector('code') ? pre.querySelector('code').textContent : code); btn.textContent = 'اتنسخ ✓'; }
+      catch { btn.textContent = 'مقدرتش أنسخ'; }
+      setTimeout(() => { btn.textContent = 'انسخ'; }, 1500);
+    };
+    pre.appendChild(btn);
+  });
+  const used = new Set();
+  const toc = [];
+  doc.querySelectorAll('h1, h2, h3').forEach((h) => {
+    h.id = slug(h.textContent, used);
+    if (h.tagName !== 'H1') toc.push(`<a class="${h.tagName.toLowerCase()}" href="#${h.id}">${h.textContent.replace(/[<>&]/g, '')}</a>`);
+  });
+  $('#toc').innerHTML = toc.join('');
+  $('#name').textContent = name;
+  document.title = name + ' — قارئ MD';
+  $('#drop').classList.add('hidden');
+  $('#layout').classList.remove('hidden');
+}
+
+async function readEntry(entry) {
+  const file = entry.handle ? await entry.handle.getFile() : entry.file;
+  return { text: await file.text(), modified: file.lastModified, name: file.name };
+}
+
+async function show(i) {
+  current = i;
+  const r = await readEntry(files[i]);
+  lastModified = r.modified;
+  render(r.text, r.name);
+  window.scrollTo(0, 0);
+  $('#live').textContent = files[i].handle ? '● تحديث تلقائي' : '';
+  $('#fileList').value = String(i);
+}
+
+function addEntries(entries) {
+  if (!entries.length) return;
+  const start = files.length;
+  files.push(...entries);
+  const list = $('#fileList');
+  list.innerHTML = files.map((f, i) => `<option value="${i}">${(f.handle ? f.handle.name : f.file.name).replace(/[<>&]/g, '')}</option>`).join('');
+  list.classList.toggle('hidden', files.length < 2);
+  show(start);
+}
+
+$('#fileList').onchange = (e) => show(Number(e.target.value));
+
+$('#openBtn').onclick = async () => {
+  if (window.showOpenFilePicker) {
+    try {
+      const handles = await window.showOpenFilePicker({ multiple: true, types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'], 'text/plain': ['.txt'] } }] });
+      addEntries(handles.map((handle) => ({ handle })));
+    } catch { /* المستخدم قفل النافذة */ }
+  } else {
+    $('#picker').click();
+  }
+};
+$('#picker').onchange = (e) => addEntries([...e.target.files].map((file) => ({ file })));
+
+document.addEventListener('dragover', (e) => { e.preventDefault(); document.body.classList.add('dragging'); });
+document.addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+document.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  document.body.classList.remove('dragging');
+  const entries = [];
+  for (const item of [...e.dataTransfer.items]) {
+    if (item.kind !== 'file') continue;
+    let handle = null;
+    if (item.getAsFileSystemHandle) { try { handle = await item.getAsFileSystemHandle(); } catch { handle = null; } }
+    if (handle && handle.kind === 'file') entries.push({ handle });
+    else { const file = item.getAsFile(); if (file) entries.push({ file }); }
+  }
+  addEntries(entries);
+});
+
+// لو الملف اتعدّل على الديسك، الصفحة بتتحدث ومكانك في الصفحة بيفضل زي ما هو
+setInterval(async () => {
+  const entry = files[current];
+  if (!entry || !entry.handle || document.hidden) return;
+  try {
+    const file = await entry.handle.getFile();
+    if (file.lastModified !== lastModified) {
+      const y = window.scrollY;
+      lastModified = file.lastModified;
+      render(await file.text(), file.name);
+      window.scrollTo(0, y);
+    }
+  } catch { /* الملف اتنقل أو اتمسح */ }
+}, 1500);
+</script>
+</body>
+</html>
